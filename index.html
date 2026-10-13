@@ -1,0 +1,1351 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>スマート席替えメーカー - 教員用 (多機能・サウンド付)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Noto Sans JP', 'Inter', sans-serif;
+        }
+        .seat-card {
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .seat-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+        .dragging {
+            opacity: 0.4;
+            transform: scale(0.95);
+        }
+        .drag-over {
+            border-color: #4f46e5 !important;
+            background-color: #e0e7ff !important;
+        }
+        .animate-pop {
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        @keyframes popIn {
+            0% { transform: scale(0.8); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .roulette-blur {
+            filter: blur(1px);
+            transform: scale(0.98);
+        }
+
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+            .print-only {
+                display: block !important;
+            }
+            .print-container {
+                width: 100% !important;
+                max-width: none !important;
+                box-shadow: none !important;
+                padding: 0 !important;
+                border: none !important;
+            }
+            body {
+                background: white !important;
+                color: black !important;
+            }
+        }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col selection:bg-indigo-500 selection:text-white">
+
+    <header class="bg-indigo-700 text-white shadow-md no-print sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 py-3 sm:px-6 flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <div class="bg-amber-400 text-indigo-950 p-2 rounded-xl font-extrabold text-xl shadow-inner flex items-center justify-center w-10 h-10">
+                    席
+                </div>
+                <div>
+                    <h1 class="text-lg sm:text-xl font-extrabold tracking-tight flex items-center gap-2">
+                        スマート席替えメーカー
+                        <span class="bg-indigo-500 text-indigo-100 text-xs px-2 py-0.5 rounded-full font-normal hidden sm:inline-block">教員専用</span>
+                    </h1>
+                    <p class="text-xs text-indigo-200">NGペア自動回避・複数クラス管理・明るいサウンド演出付き</p>
+                </div>
+            </div>
+
+            <div class="flex items-center space-x-2 sm:space-x-3">
+                <!-- Sound Toggle Button -->
+                <button id="btn-sound-toggle" onclick="toggleSound()" class="bg-indigo-800 hover:bg-indigo-600 text-amber-300 border border-indigo-500/50 text-xs sm:text-sm px-3 py-2 rounded-lg flex items-center gap-1.5 font-medium transition shadow-sm" title="効果音のON/OFF切り替え">
+                    <span id="sound-icon">🔊</span>
+                    <span id="sound-label" class="hidden sm:inline">サウンド: ON</span>
+                </button>
+
+                <!-- Print Button -->
+                <button onclick="window.print()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs sm:text-sm px-3 py-2 rounded-lg flex items-center gap-1.5 font-medium shadow-sm transition">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+                    <span>印刷 / PDF</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Notification Toast Container -->
+    <div id="toast-container" class="fixed top-4 right-4 z-50 flex flex-col gap-2 pointer-events-none no-print"></div>
+
+    <main class="max-w-7xl mx-auto px-4 py-6 sm:px-6 flex-grow w-full grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+        <!-- Top Class Management Bar -->
+        <div class="lg:col-span-12 bg-white rounded-2xl shadow-sm p-4 border border-slate-200/80 flex flex-wrap items-center justify-between gap-4 no-print">
+            <div class="flex items-center gap-3 flex-wrap">
+                <span class="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
+                    <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                    対象クラス:
+                </span>
+                <select id="select-active-class" onchange="switchClass(this.value)" class="bg-slate-50 border border-slate-300 font-bold text-slate-800 text-sm rounded-xl px-4 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    <!-- Dynamic Class Options -->
+                </select>
+                <button onclick="promptCreateClass()" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold text-xs px-3 py-2 rounded-xl transition flex items-center gap-1">
+                    + クラスを追加
+                </button>
+                <button onclick="promptRenameClass()" class="text-xs text-slate-500 hover:text-slate-800 underline">
+                    名前変更
+                </button>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <button onclick="exportClassData()" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg border transition">
+                    保存データ出力(JSON)
+                </button>
+                <label class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg border transition cursor-pointer">
+                    データ復元
+                    <input type="file" id="input-import-json" accept=".json" onchange="importClassData(event)" class="hidden">
+                </label>
+                <button onclick="promptDeleteClass()" class="text-xs text-red-500 hover:text-red-700 px-2 py-1.5 rounded transition">
+                    クラス削除
+                </button>
+            </div>
+        </div>
+
+        <!-- Sidebar / Settings Control (Left Column) -->
+        <section class="lg:col-span-4 flex flex-col gap-6 no-print">
+            
+            <!-- Tab Controls -->
+            <div class="bg-white rounded-xl shadow-sm p-1 border border-slate-200 flex text-xs sm:text-sm font-semibold">
+                <button id="tab-btn-students" onclick="switchTab('students')" class="flex-1 py-2 text-center rounded-lg bg-indigo-600 text-white shadow-sm transition">1. 名簿登録</button>
+                <button id="tab-btn-rules" onclick="switchTab('rules')" class="flex-1 py-2 text-center rounded-lg text-slate-600 hover:text-slate-900 transition">2. NG指定</button>
+                <button id="tab-btn-grid" onclick="switchTab('grid')" class="flex-1 py-2 text-center rounded-lg text-slate-600 hover:text-slate-900 transition">3. 教室配置</button>
+            </div>
+
+            <!-- Tab 1: Students Management Panel -->
+            <div id="tab-content-students" class="bg-white rounded-2xl shadow-sm p-5 border border-slate-200 flex flex-col gap-4">
+                <div class="flex justify-between items-center border-b pb-3">
+                    <h2 class="font-bold text-slate-800 flex items-center gap-2 text-sm">
+                        <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                        生徒名簿 (<span id="student-count" class="text-indigo-600 font-bold">0</span>名)
+                    </h2>
+                    <button onclick="loadSampleDataForCurrentClass()" class="text-xs text-indigo-600 hover:underline">サンプル生徒読込</button>
+                </div>
+
+                <!-- Add Student Single -->
+                <div class="flex gap-2">
+                    <input type="text" id="input-student-name" placeholder="生徒の氏名（例: 佐藤 太陽）" class="flex-1 text-xs sm:text-sm border border-slate-300 rounded-xl px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    <button onclick="addSingleStudent()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition shrink-0">追加</button>
+                </div>
+
+                <!-- Bulk Registration Collapsible -->
+                <details class="text-xs bg-slate-50 p-3 rounded-xl border border-slate-200">
+                    <summary class="font-semibold text-slate-700 cursor-pointer">改行・カンマ区切りで一括入力</summary>
+                    <div class="mt-2 flex flex-col gap-2">
+                        <textarea id="input-bulk-students" rows="4" placeholder="佐藤花子&#10;鈴木一郎&#10;高橋健太" class="w-full border border-slate-300 rounded-lg p-2 text-xs font-mono"></textarea>
+                        <button onclick="addBulkStudents()" class="bg-slate-800 hover:bg-slate-900 text-white py-1.5 px-3 rounded-lg text-xs font-semibold self-end">一括追加する</button>
+                    </div>
+                </details>
+
+                <!-- Student List Container -->
+                <div id="student-list" class="max-h-72 overflow-y-auto space-y-1 pr-1 border rounded-xl p-2 bg-slate-50/50">
+                    <!-- Dynamic rendering -->
+                </div>
+
+                <div class="flex justify-between items-center text-xs text-slate-500 pt-2 border-t">
+                    <button onclick="removeAllStudents()" class="text-red-500 hover:underline">このクラスの生徒を全員消去</button>
+                </div>
+            </div>
+
+            <!-- Tab 2: NG Pair Rules Panel -->
+            <div id="tab-content-rules" class="bg-white rounded-2xl shadow-sm p-5 border border-slate-200 flex flex-col gap-4 hidden">
+                <div class="border-b pb-3">
+                    <h2 class="font-bold text-slate-800 flex items-center gap-2 text-sm">
+                        <svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"></path></svg>
+                        隣同士不可（NGペア）設定
+                    </h2>
+                    <p class="text-xs text-slate-500 mt-1">選んだ2名の生徒が絶対に隣り合わないようにアルゴリズムで制御します。</p>
+                </div>
+
+                <!-- Add NG Pair -->
+                <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 flex flex-col gap-3">
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="text-xs font-semibold text-slate-600 block mb-1">生徒 1</label>
+                            <select id="select-ng-1" class="w-full text-xs border border-slate-300 rounded-lg px-2 py-1.5 focus:ring-1 focus:ring-indigo-500">
+                                <option value="">選択してください</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-xs font-semibold text-slate-600 block mb-1">生徒 2</label>
+                            <select id="select-ng-2" class="w-full text-xs border border-slate-300 rounded-lg px-2 py-1.5 focus:ring-1 focus:ring-indigo-500">
+                                <option value="">選択してください</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button onclick="addNgPair()" class="w-full bg-red-600 hover:bg-red-700 text-white py-2 rounded-xl text-xs font-semibold transition flex justify-center items-center gap-1 shadow-sm">
+                        + NG回避ルールを追加
+                    </button>
+                </div>
+
+                <!-- NG Rules List -->
+                <div class="flex-1">
+                    <h3 class="text-xs font-bold text-slate-700 mb-2">設定中のNGペア (<span id="ng-count">0</span>件)</h3>
+                    <div id="ng-pair-list" class="max-h-52 overflow-y-auto space-y-2 pr-1">
+                        <!-- Dynamic list -->
+                    </div>
+                </div>
+
+                <!-- Proximity Mode Setting -->
+                <div class="bg-indigo-50/70 p-3 rounded-xl border border-indigo-100 text-xs text-indigo-950 space-y-2">
+                    <span class="font-bold block text-indigo-900">NG判定の対象範囲:</span>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="radio" name="ng-scope" value="horizontal" checked onchange="updateNgScope(this.value)" class="text-indigo-600 focus:ring-indigo-500">
+                        <span>左右のとなり同士のみ回避</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="radio" name="ng-scope" value="all" onchange="updateNgScope(this.value)" class="text-indigo-600 focus:ring-indigo-500">
+                        <span>前後・左右・斜めすべての隣接を回避</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Tab 3: Grid Configuration Panel -->
+            <div id="tab-content-grid" class="bg-white rounded-2xl shadow-sm p-5 border border-slate-200 flex flex-col gap-4 hidden">
+                <div class="border-b pb-3">
+                    <h2 class="font-bold text-slate-800 flex items-center gap-2 text-sm">
+                        <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+                        座席配置（列数・行数）
+                    </h2>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-xs font-semibold text-slate-600 block mb-1">横の列数 (1〜10)</label>
+                        <input type="number" id="input-cols" min="1" max="10" value="6" onchange="updateGridDimensions()" class="w-full text-sm font-bold border border-slate-300 rounded-lg px-3 py-2">
+                    </div>
+                    <div>
+                        <label class="text-xs font-semibold text-slate-600 block mb-1">縦の行数 (1〜10)</label>
+                        <input type="number" id="input-rows" min="1" max="10" value="5" onchange="updateGridDimensions()" class="w-full text-sm font-bold border border-slate-300 rounded-lg px-3 py-2">
+                    </div>
+                </div>
+
+                <div class="text-xs text-slate-600 bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-1">
+                    <p>総マス数: <span id="total-seats-display" class="font-bold text-indigo-600">30</span> 席</p>
+                    <p class="text-slate-500">※ 右側の教室画面で個別のマスをクリックすると「通路・使わない席」に変更できます。</p>
+                </div>
+            </div>
+
+            <!-- Main Shuffle Action Button -->
+            <div class="bg-gradient-to-br from-indigo-900 to-slate-900 p-5 rounded-2xl text-white shadow-lg flex flex-col gap-3 relative overflow-hidden">
+                <div class="absolute -right-6 -bottom-6 w-24 h-24 bg-indigo-500/10 rounded-full blur-xl pointer-events-none"></div>
+
+                <button id="btn-shuffle" onclick="runSeatingShuffle()" class="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-indigo-950 py-3.5 px-4 rounded-xl font-black text-base shadow-lg hover:shadow-xl hover:scale-[1.01] active:scale-[0.99] transition transform flex items-center justify-center gap-2 group">
+                    <span class="text-xl group-hover:rotate-180 transition transform duration-500">🎲</span>
+                    <span>席替えを実行する (効果音付き)</span>
+                </button>
+
+                <div id="status-bar" class="text-xs text-center font-medium text-indigo-200 min-h-[20px] flex items-center justify-center gap-1">
+                    ✨ シャッフルボタンを押すとルーレットがスタートします
+                </div>
+            </div>
+
+        </section>
+
+        <!-- Classroom Visualizer (Right Column) -->
+        <section class="lg:col-span-8 flex flex-col gap-4">
+            
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex flex-col min-h-[620px] print-container relative">
+                
+                <!-- Classroom Title for Print -->
+                <div class="hidden print-only mb-4 text-center border-b pb-2">
+                    <h1 class="text-2xl font-bold" id="print-class-title">座席配置図</h1>
+                    <p class="text-sm text-gray-500" id="print-date"></p>
+                </div>
+
+                <!-- Classroom Front Indicator -->
+                <div class="mb-6 flex flex-col items-center">
+                    <div class="w-2/3 max-w-sm bg-slate-800 text-amber-300 text-center py-2 rounded-xl font-black text-sm tracking-widest shadow-md border-b-4 border-slate-950 flex items-center justify-center gap-2">
+                        <span>📺</span> 【 黒 板 ・ 教 卓 】 <span>📺</span>
+                    </div>
+                    <div class="text-[11px] text-slate-400 mt-1 font-medium">※ こちら側が教室の前面（黒板側）です</div>
+                </div>
+
+                <!-- Alert Warning Banner (if conflicts exist) -->
+                <div id="conflict-alert" class="hidden mb-4 bg-red-50 border-2 border-red-200 text-red-700 p-3 rounded-xl text-xs flex items-center gap-2 animate-bounce">
+                    <svg class="w-5 h-5 text-red-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                    <div>
+                        <span class="font-bold">NGペア警告:</span>
+                        <span id="conflict-message">手動操作または条件過多のため、隣同士不可に指定された生徒が隣接しています。</span>
+                    </div>
+                </div>
+
+                <!-- Seating Grid Canvas -->
+                <div class="flex-1 flex justify-center items-center overflow-x-auto py-2">
+                    <div id="classroom-grid" class="grid gap-3 transition-all duration-300 w-full">
+                        <!-- Seats will be rendered dynamically -->
+                    </div>
+                </div>
+
+                <!-- Instructions Footer -->
+                <div class="mt-6 pt-4 border-t border-slate-100 flex flex-wrap justify-between items-center text-xs text-slate-500 no-print gap-2">
+                    <div class="flex flex-wrap items-center gap-3">
+                        <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-md bg-indigo-50 border border-indigo-200 inline-block"></span> 着席中</span>
+                        <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-md bg-slate-100 border border-slate-300 inline-block"></span> 空席</span>
+                        <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-md bg-slate-200 border border-dashed border-slate-400 inline-block"></span> 通路・不使用</span>
+                        <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-md bg-red-100 border border-red-400 inline-block"></span> NG警告</span>
+                    </div>
+                    <div class="text-right text-slate-400 font-medium">
+                        💡 生徒カード同士をドラッグ＆ドロップで自由に入れ替え可能
+                    </div>
+                </div>
+
+            </div>
+
+        </section>
+
+    </main>
+
+    <script>
+        // --- Web Audio API Bright Sound Effects Engine ---
+        class SoundEngine {
+            constructor() {
+                this.ctx = null;
+                this.enabled = true;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    if (AudioContext) {
+                        this.ctx = new AudioContext();
+                    }
+                }
+                if (this.ctx && this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+
+            playClick() {
+                if (!this.enabled) return;
+                this.init();
+                if (!this.ctx) return;
+
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(600, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(800, this.ctx.currentTime + 0.05);
+
+                gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.05);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.05);
+            }
+
+            playTick() {
+                if (!this.enabled) return;
+                this.init();
+                if (!this.ctx) return;
+
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(300 + Math.random() * 200, this.ctx.currentTime);
+
+                gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.04);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.04);
+            }
+
+            playFanfare() {
+                if (!this.enabled) return;
+                this.init();
+                if (!this.ctx) return;
+
+                // Bright cheerful fanfare chords (C Major -> F -> G -> C)
+                const notes = [
+                    { f: 523.25, t: 0, d: 0.12 },     // C5
+                    { f: 659.25, t: 0.12, d: 0.12 },  // E5
+                    { f: 783.99, t: 0.24, d: 0.12 },  // G5
+                    { f: 1046.50, t: 0.36, d: 0.45 }  // C6
+                ];
+
+                notes.forEach(n => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(n.f, this.ctx.currentTime + n.t);
+
+                    gain.gain.setValueAtTime(0.2, this.ctx.currentTime + n.t);
+                    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + n.t + n.d);
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+
+                    osc.start(this.ctx.currentTime + n.t);
+                    osc.stop(this.ctx.currentTime + n.t + n.d);
+                });
+            }
+
+            playError() {
+                if (!this.enabled) return;
+                this.init();
+                if (!this.ctx) return;
+
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(220, this.ctx.currentTime);
+                osc.frequency.setValueAtTime(180, this.ctx.currentTime + 0.1);
+
+                gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.3);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.3);
+            }
+
+            playDropSound() {
+                if (!this.enabled) return;
+                this.init();
+                if (!this.ctx) return;
+
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(400, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(700, this.ctx.currentTime + 0.08);
+
+                gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.08);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.08);
+            }
+        }
+
+        const sound = new SoundEngine();
+
+        function toggleSound() {
+            sound.enabled = !sound.enabled;
+            const label = document.getElementById('sound-label');
+            const icon = document.getElementById('sound-icon');
+
+            if (sound.enabled) {
+                label.textContent = "サウンド: ON";
+                icon.textContent = "🔊";
+                sound.playClick();
+            } else {
+                label.textContent = "サウンド: OFF";
+                icon.textContent = "🔇";
+            }
+        }
+
+        // --- Application State Store ---
+        const LOCAL_STORAGE_KEY = 'smart_seating_app_data_v2';
+
+        let appData = {
+            activeClassId: 'class_1',
+            classes: [
+                {
+                    id: 'class_1',
+                    name: '1年A組',
+                    students: [],
+                    ngPairs: [],
+                    ngScope: 'horizontal',
+                    gridConfig: { rows: 5, cols: 6 },
+                    seats: []
+                }
+            ]
+        };
+
+        window.onload = function() {
+            loadFromLocalStorage();
+            if (!appData.classes || appData.classes.length === 0) {
+                createDefaultClass('1年A組');
+            }
+            ensureActiveClassValid();
+            renderClassSelectOptions();
+            syncUIFromCurrentClass();
+            setupPrintDate();
+        };
+
+        function saveToLocalStorage() {
+            try {
+                localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(appData));
+            } catch (e) {
+                console.error("Failed to save state to localStorage", e);
+            }
+        }
+
+        function loadFromLocalStorage() {
+            try {
+                const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
+                if (stored) {
+                    appData = JSON.parse(stored);
+                }
+            } catch (e) {
+                console.error("Failed to load from localStorage", e);
+            }
+        }
+
+        function getCurrentClass() {
+            return appData.classes.find(c => c.id === appData.activeClassId) || appData.classes[0];
+        }
+
+        function ensureActiveClassValid() {
+            if (!appData.classes.some(c => c.id === appData.activeClassId)) {
+                if (appData.classes.length > 0) {
+                    appData.activeClassId = appData.classes[0].id;
+                }
+            }
+        }
+
+        function setupPrintDate() {
+            const dateEl = document.getElementById('print-date');
+            if (dateEl) {
+                const today = new Date();
+                dateEl.textContent = `作成日: ${today.getFullYear()}年${today.getMonth() + 1}月${today.getDate()}日`;
+            }
+        }
+
+        // --- Class Switcher & Management ---
+        function renderClassSelectOptions() {
+            const selectEl = document.getElementById('select-active-class');
+            selectEl.innerHTML = appData.classes.map(c => 
+                `<option value="${c.id}" ${c.id === appData.activeClassId ? 'selected' : ''}>${escapeHtml(c.name)} (${c.students.length}名)</option>`
+            ).join('');
+        }
+
+        function switchClass(classId) {
+            sound.playClick();
+            appData.activeClassId = classId;
+            saveToLocalStorage();
+            syncUIFromCurrentClass();
+        }
+
+        function createDefaultClass(name) {
+            const newClass = {
+                id: 'class_' + Date.now(),
+                name: name,
+                students: [],
+                ngPairs: [],
+                ngScope: 'horizontal',
+                gridConfig: { rows: 5, cols: 6 },
+                seats: []
+            };
+            appData.classes.push(newClass);
+            appData.activeClassId = newClass.id;
+            
+            // Populate sample data for default class
+            loadSampleStudentsForClass(newClass);
+            saveToLocalStorage();
+        }
+
+        function promptCreateClass() {
+            sound.playClick();
+            const name = prompt("新しいクラス名を入力してください（例: 2年B組, 英語アディショナルクラス）:");
+            if (name && name.trim()) {
+                const newClass = {
+                    id: 'class_' + Date.now(),
+                    name: name.trim(),
+                    students: [],
+                    ngPairs: [],
+                    ngScope: 'horizontal',
+                    gridConfig: { rows: 5, cols: 6 },
+                    seats: []
+                };
+                appData.classes.push(newClass);
+                appData.activeClassId = newClass.id;
+                saveToLocalStorage();
+                renderClassSelectOptions();
+                syncUIFromCurrentClass();
+                showToast(`クラス「${name.trim()}」を作成しました`, "success");
+            }
+        }
+
+        function promptRenameClass() {
+            sound.playClick();
+            const current = getCurrentClass();
+            const newName = prompt("クラス名の変更:", current.name);
+            if (newName && newName.trim()) {
+                current.name = newName.trim();
+                saveToLocalStorage();
+                renderClassSelectOptions();
+                syncUIFromCurrentClass();
+                showToast("クラス名を変更しました");
+            }
+        }
+
+        function promptDeleteClass() {
+            sound.playClick();
+            if (appData.classes.length <= 1) {
+                showToast("最低1つのクラスが必要です（削除できません）", "error");
+                return;
+            }
+            const current = getCurrentClass();
+            if (confirm(`本当にクラス「${current.name}」を削除しますか？`)) {
+                appData.classes = appData.classes.filter(c => c.id !== current.id);
+                appData.activeClassId = appData.classes[0].id;
+                saveToLocalStorage();
+                renderClassSelectOptions();
+                syncUIFromCurrentClass();
+                showToast("クラスを削除しました");
+            }
+        }
+
+        function syncUIFromCurrentClass() {
+            const current = getCurrentClass();
+
+            // Set inputs
+            document.getElementById('input-rows').value = current.gridConfig.rows;
+            document.getElementById('input-cols').value = current.gridConfig.cols;
+            
+            // Set scope radio
+            const radios = document.getElementsByName('ng-scope');
+            radios.forEach(r => r.checked = (r.value === (current.ngScope || 'horizontal')));
+
+            // Print header update
+            document.getElementById('print-class-title').textContent = `${current.name} 座席配置図`;
+
+            // Make sure seats grid aligns with config
+            ensureGridSeatsAllocated(current);
+
+            renderStudentsList();
+            renderNgPairsList();
+            updateNgSelectDropdowns();
+            renderClassroomGrid();
+            renderClassSelectOptions();
+        }
+
+        function loadSampleStudentsForClass(classObj) {
+            const sampleNames = [
+                "相沢 拓海", "井上 陽菜", "遠藤 健太", "太田 美咲", "岡田 翔太",
+                "加藤 葵", "木村 蓮", "工藤 結衣", "小林 陸", "斉藤 凛",
+                "坂本 大輝", "佐藤 莉子", "清水 悠斗", "鈴木 芽衣", "高橋 颯太",
+                "田中 心春", "谷口 奏太", "中島 菜々", "中村 陽翔", "林 詩織",
+                "原田 樹", "藤田 咲希", "松本 竜也", "三浦 柚希", "水野 颯",
+                "森 萌々香", "山口 駿", "山崎 結菜", "渡辺 航平"
+            ];
+
+            classObj.students = sampleNames.map((name, index) => ({
+                id: 'std_' + (index + 1),
+                name: name
+            }));
+
+            classObj.ngPairs = [
+                { id: 'ng_1', student1Id: classObj.students[0].id, student2Id: classObj.students[1].id },
+                { id: 'ng_2', student1Id: classObj.students[2].id, student2Id: classObj.students[3].id }
+            ];
+
+            ensureGridSeatsAllocated(classObj);
+        }
+
+        function loadSampleDataForCurrentClass() {
+            sound.playClick();
+            const current = getCurrentClass();
+            loadSampleStudentsForClass(current);
+            saveToLocalStorage();
+            syncUIFromCurrentClass();
+            generateSeatingLayout(false); // fast layout
+            showToast("サンプル生徒名簿を読み込みました", "success");
+        }
+
+        function renderStudentsList() {
+            const current = getCurrentClass();
+            const listEl = document.getElementById('student-list');
+            const countEl = document.getElementById('student-count');
+            countEl.textContent = current.students.length;
+
+            if (current.students.length === 0) {
+                listEl.innerHTML = `<div class="text-center py-6 text-xs text-slate-400">生徒が登録されていません</div>`;
+                return;
+            }
+
+            listEl.innerHTML = current.students.map((student, idx) => `
+                <div class="flex justify-between items-center py-1.5 px-2.5 hover:bg-white bg-white/60 rounded-lg text-xs transition border border-transparent hover:border-slate-200">
+                    <span class="font-semibold text-slate-700">${idx + 1}. ${escapeHtml(student.name)}</span>
+                    <button onclick="removeStudent('${student.id}')" class="text-slate-400 hover:text-red-500 p-1 transition" title="削除">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        function addSingleStudent() {
+            const input = document.getElementById('input-student-name');
+            const name = input.value.trim();
+            if (!name) {
+                sound.playError();
+                showToast("生徒の氏名を入力してください", "error");
+                return;
+            }
+
+            sound.playClick();
+            const current = getCurrentClass();
+            const newStudent = {
+                id: 'std_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+                name: name
+            };
+
+            current.students.push(newStudent);
+            input.value = '';
+
+            autoFitGridIfNeeded(current);
+            saveToLocalStorage();
+            renderStudentsList();
+            updateNgSelectDropdowns();
+            renderClassSelectOptions();
+            showToast(`${name} を追加しました`);
+        }
+
+        function addBulkStudents() {
+            const textarea = document.getElementById('input-bulk-students');
+            const raw = textarea.value;
+            const lines = raw.split(/[\n,、\t]/).map(l => l.trim()).filter(l => l.length > 0);
+
+            if (lines.length === 0) {
+                sound.playError();
+                showToast("名前を入力してください", "error");
+                return;
+            }
+
+            sound.playClick();
+            const current = getCurrentClass();
+            lines.forEach(name => {
+                current.students.push({
+                    id: 'std_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+                    name: name
+                });
+            });
+
+            textarea.value = '';
+            autoFitGridIfNeeded(current);
+            saveToLocalStorage();
+            renderStudentsList();
+            updateNgSelectDropdowns();
+            renderClassSelectOptions();
+            showToast(`${lines.length}名の生徒を一括追加しました`, "success");
+        }
+
+        function removeStudent(id) {
+            sound.playClick();
+            const current = getCurrentClass();
+            current.students = current.students.filter(s => s.id !== id);
+            current.ngPairs = current.ngPairs.filter(p => p.student1Id !== id && p.student2Id !== id);
+            
+            current.seats.forEach(seat => {
+                if (seat.studentId === id) seat.studentId = null;
+            });
+
+            saveToLocalStorage();
+            renderStudentsList();
+            renderNgPairsList();
+            updateNgSelectDropdowns();
+            renderClassroomGrid();
+            renderClassSelectOptions();
+        }
+
+        function removeAllStudents() {
+            sound.playClick();
+            if (!confirm("このクラスの全生徒を削除しますか？")) return;
+
+            const current = getCurrentClass();
+            current.students = [];
+            current.ngPairs = [];
+            current.seats.forEach(s => s.studentId = null);
+
+            saveToLocalStorage();
+            renderStudentsList();
+            renderNgPairsList();
+            updateNgSelectDropdowns();
+            renderClassroomGrid();
+            renderClassSelectOptions();
+            showToast("全生徒を削除しました");
+        }
+
+        function autoFitGridIfNeeded(current) {
+            const usableSeatsCount = current.seats.filter(s => s.type === 'seat').length;
+            if (current.students.length > usableSeatsCount) {
+                while (current.students.length > current.gridConfig.rows * current.gridConfig.cols) {
+                    current.gridConfig.rows++;
+                }
+                document.getElementById('input-rows').value = current.gridConfig.rows;
+                ensureGridSeatsAllocated(current);
+            }
+        }
+
+        // --- NG Pair Rules Logic ---
+        function updateNgSelectDropdowns() {
+            const current = getCurrentClass();
+            const sel1 = document.getElementById('select-ng-1');
+            const sel2 = document.getElementById('select-ng-2');
+
+            const optionsHtml = '<option value="">選択してください</option>' + 
+                current.students.map(s => `<option value="${s.id}">${escapeHtml(s.name)}</option>`).join('');
+
+            sel1.innerHTML = optionsHtml;
+            sel2.innerHTML = optionsHtml;
+        }
+
+        function addNgPair() {
+            const id1 = document.getElementById('select-ng-1').value;
+            const id2 = document.getElementById('select-ng-2').value;
+
+            if (!id1 || !id2) {
+                sound.playError();
+                showToast("両方の生徒を選択してください", "error");
+                return;
+            }
+
+            if (id1 === id2) {
+                sound.playError();
+                showToast("同一人物を選択することはできません", "error");
+                return;
+            }
+
+            const current = getCurrentClass();
+            const exists = current.ngPairs.some(p => 
+                (p.student1Id === id1 && p.student2Id === id2) || 
+                (p.student1Id === id2 && p.student2Id === id1)
+            );
+
+            if (exists) {
+                sound.playError();
+                showToast("このNG指定は既に登録されています", "error");
+                return;
+            }
+
+            sound.playClick();
+            current.ngPairs.push({
+                id: 'ng_' + Date.now(),
+                student1Id: id1,
+                student2Id: id2
+            });
+
+            saveToLocalStorage();
+            renderNgPairsList();
+            checkAndHighlightConflicts();
+            showToast("NG指定ルールを追加しました", "success");
+        }
+
+        function removeNgPair(pairId) {
+            sound.playClick();
+            const current = getCurrentClass();
+            current.ngPairs = current.ngPairs.filter(p => p.id !== pairId);
+            saveToLocalStorage();
+            renderNgPairsList();
+            checkAndHighlightConflicts();
+        }
+
+        function renderNgPairsList() {
+            const current = getCurrentClass();
+            const listEl = document.getElementById('ng-pair-list');
+            const countEl = document.getElementById('ng-count');
+            countEl.textContent = current.ngPairs.length;
+
+            if (current.ngPairs.length === 0) {
+                listEl.innerHTML = `<div class="text-center py-4 text-xs text-slate-400">設定されているNGペアはありません</div>`;
+                return;
+            }
+
+            listEl.innerHTML = current.ngPairs.map(pair => {
+                const s1 = current.students.find(s => s.id === pair.student1Id);
+                const s2 = current.students.find(s => s.id === pair.student2Id);
+                const name1 = s1 ? escapeHtml(s1.name) : '（削除済）';
+                const name2 = s2 ? escapeHtml(s2.name) : '（削除済）';
+
+                return `
+                    <div class="flex justify-between items-center bg-red-50/90 border border-red-200 p-2 rounded-xl text-xs">
+                        <div class="flex items-center gap-1.5 font-bold text-slate-800">
+                            <span>${name1}</span>
+                            <span class="text-red-500 font-black px-1">✕ (NG)</span>
+                            <span>${name2}</span>
+                        </div>
+                        <button onclick="removeNgPair('${pair.id}')" class="text-slate-400 hover:text-red-600 p-1 transition">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function updateNgScope(val) {
+            sound.playClick();
+            const current = getCurrentClass();
+            current.ngScope = val;
+            saveToLocalStorage();
+            checkAndHighlightConflicts();
+        }
+
+        // --- Seat Grid Management ---
+        function updateGridDimensions() {
+            sound.playClick();
+            const rows = parseInt(document.getElementById('input-rows').value, 10) || 5;
+            const cols = parseInt(document.getElementById('input-cols').value, 10) || 6;
+
+            const current = getCurrentClass();
+            current.gridConfig.rows = Math.max(1, Math.min(10, rows));
+            current.gridConfig.cols = Math.max(1, Math.min(10, cols));
+
+            ensureGridSeatsAllocated(current);
+            saveToLocalStorage();
+            renderClassroomGrid();
+        }
+
+        function ensureGridSeatsAllocated(current) {
+            const totalCells = current.gridConfig.rows * current.gridConfig.cols;
+            document.getElementById('total-seats-display').textContent = totalCells;
+
+            const existingStudentIds = [];
+            if (current.seats) {
+                current.seats.forEach(s => {
+                    if (s && s.studentId) existingStudentIds.push(s.studentId);
+                });
+            }
+
+            const newSeats = [];
+            for (let i = 0; i < totalCells; i++) {
+                const oldType = current.seats && current.seats[i] ? current.seats[i].type : 'seat';
+                newSeats.push({
+                    type: oldType,
+                    studentId: existingStudentIds[i] || null
+                });
+            }
+            current.seats = newSeats;
+        }
+
+        function toggleSeatType(cellIndex) {
+            sound.playClick();
+            const current = getCurrentClass();
+            if (current.seats[cellIndex].type === 'seat') {
+                current.seats[cellIndex].type = 'disabled';
+                current.seats[cellIndex].studentId = null;
+            } else {
+                current.seats[cellIndex].type = 'seat';
+            }
+            saveToLocalStorage();
+            renderClassroomGrid();
+            checkAndHighlightConflicts();
+        }
+
+        // --- Classroom Visual Grid Rendering ---
+        function renderClassroomGrid() {
+            const current = getCurrentClass();
+            const gridEl = document.getElementById('classroom-grid');
+            const { rows, cols } = current.gridConfig;
+
+            gridEl.style.gridTemplateColumns = `repeat(${cols}, minmax(0, 1fr))`;
+
+            const conflicts = getConflictingSeatIndices(current);
+
+            gridEl.innerHTML = current.seats.map((seat, index) => {
+                const row = Math.floor(index / cols);
+                const col = index % cols;
+                const student = seat.studentId ? current.students.find(s => s.id === seat.studentId) : null;
+                const isConflicted = conflicts.has(index);
+
+                if (seat.type === 'disabled') {
+                    return `
+                        <div onclick="toggleSeatType(${index})" title="クリックで通常の席に変更" class="h-20 sm:h-24 rounded-xl bg-slate-100/80 border-2 border-dashed border-slate-300 flex flex-col justify-center items-center text-slate-400 cursor-pointer hover:bg-slate-200 transition text-xs select-none">
+                            <span class="font-mono text-[10px] text-slate-400 mb-1">${row + 1}-${col + 1}</span>
+                            <span class="font-bold">通路 / 空席</span>
+                        </div>
+                    `;
+                }
+
+                let borderBgClass = "bg-white border-slate-200 hover:border-indigo-400";
+                if (isConflicted) {
+                    borderBgClass = "bg-red-50 border-red-500 shadow-md ring-2 ring-red-400/50";
+                } else if (student) {
+                    borderBgClass = "bg-indigo-50/80 border-indigo-200 shadow-sm hover:shadow-md";
+                }
+
+                return `
+                    <div data-index="${index}" 
+                         draggable="${student ? 'true' : 'false'}"
+                         ondragstart="handleDragStart(event, ${index})"
+                         ondragover="handleDragOver(event)"
+                         ondragleave="handleDragLeave(event)"
+                         ondrop="handleDrop(event, ${index})"
+                         onclick="handleSeatClick(event, ${index})"
+                         class="seat-card h-20 sm:h-24 rounded-2xl border-2 p-2 flex flex-col justify-between cursor-pointer select-none relative ${borderBgClass}">
+                        
+                        <div class="flex justify-between items-start text-[10px] text-slate-400 no-print">
+                            <span class="font-mono font-semibold">${row + 1}-${col + 1}</span>
+                            ${isConflicted ? '<span class="text-red-600 font-extrabold animate-pulse">⚠️ NG</span>' : ''}
+                        </div>
+
+                        <div class="flex-1 flex items-center justify-center text-center px-1">
+                            ${student ? `
+                                <span class="font-extrabold text-slate-800 text-xs sm:text-sm tracking-tight leading-snug">${escapeHtml(student.name)}</span>
+                            ` : `
+                                <span class="text-xs text-slate-300 font-medium">空席</span>
+                            `}
+                        </div>
+
+                        <div class="text-[9px] text-slate-400 text-center no-print">
+                            ${student ? '⋮⋮ ドラッグ可' : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            const conflictBanner = document.getElementById('conflict-alert');
+            if (conflicts.size > 0) {
+                conflictBanner.classList.remove('hidden');
+            } else {
+                conflictBanner.classList.add('hidden');
+            }
+        }
+
+        function handleSeatClick(e, index) {
+            // Optional click handler
+        }
+
+        // --- Drag and Drop Logic for Manual Seat Swapping ---
+        let draggedSeatIndex = null;
+
+        function handleDragStart(e, index) {
+            draggedSeatIndex = index;
+            e.dataTransfer.effectAllowed = 'move';
+            e.currentTarget.classList.add('dragging');
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            e.currentTarget.classList.add('drag-over');
+        }
+
+        function handleDragLeave(e) {
+            e.currentTarget.classList.remove('drag-over');
+        }
+
+        function handleDrop(e, targetIndex) {
+            e.preventDefault();
+            e.currentTarget.classList.remove('drag-over');
+
+            if (draggedSeatIndex === null || draggedSeatIndex === targetIndex) return;
+
+            const current = getCurrentClass();
+            sound.playDropSound();
+
+            // Swap students
+            const temp = current.seats[draggedSeatIndex].studentId;
+            current.seats[draggedSeatIndex].studentId = current.seats[targetIndex].studentId;
+            current.seats[targetIndex].studentId = temp;
+
+            saveToLocalStorage();
+            renderClassroomGrid();
+            checkAndHighlightConflicts();
+            showToast("座席を手動で入れ替えました");
+        }
+
+        // --- Conflict Detection Algorithm ---
+        function getNeighbors(index, gridConfig, scope) {
+            const { rows, cols } = gridConfig;
+            const r = Math.floor(index / cols);
+            const c = index % cols;
+            const neighbors = [];
+
+            // Horizontal neighbors
+            if (c > 0) neighbors.push(index - 1);
+            if (c < cols - 1) neighbors.push(index + 1);
+
+            if (scope === 'all') {
+                // Vertical
+                if (r > 0) neighbors.push(index - cols);
+                if (r < rows - 1) neighbors.push(index + cols);
+                // Diagonal
+                if (r > 0 && c > 0) neighbors.push(index - cols - 1);
+                if (r > 0 && c < cols - 1) neighbors.push(index - cols + 1);
+                if (r < rows - 1 && c > 0) neighbors.push(index + cols - 1);
+                if (r < rows - 1 && c < cols - 1) neighbors.push(index + cols + 1);
+            }
+
+            return neighbors;
+        }
+
+        function getConflictingSeatIndices(classObj) {
+            const conflictingIndices = new Set();
+            const { seats, ngPairs, ngScope, gridConfig } = classObj;
+
+            if (!ngPairs || ngPairs.length === 0) return conflictingIndices;
+
+            seats.forEach((seat, index) => {
+                if (!seat.studentId || seat.type === 'disabled') return;
+
+                const currentStudentId = seat.studentId;
+                const neighborIndices = getNeighbors(index, gridConfig, ngScope || 'horizontal');
+
+                neighborIndices.forEach(nIndex => {
+                    const neighborSeat = seats[nIndex];
+                    if (!neighborSeat || !neighborSeat.studentId || neighborSeat.type === 'disabled') return;
+
+                    const neighborStudentId = neighborSeat.studentId;
+
+                    const isNg = ngPairs.some(p => 
+                        (p.student1Id === currentStudentId && p.student2Id === neighborStudentId) ||
+                        (p.student1Id === neighborStudentId && p.student2Id === currentStudentId)
+                    );
+
+                    if (isNg) {
+                        conflictingIndices.add(index);
+                        conflictingIndices.add(nIndex);
+                    }
+                });
+            });
+
+            return conflictingIndices;
+        }
+
+        function checkAndHighlightConflicts() {
+            renderClassroomGrid();
+        }
+
+        // --- Seating Generation with Animated Roulette and Fanfare ---
+        async function runSeatingShuffle() {
+            sound.playClick();
+            const current = getCurrentClass();
+
+            const availableSeats = current.seats
+                .map((seat, index) => ({ index, type: seat.type }))
+                .filter(s => s.type === 'seat');
+
+            if (current.students.length > availableSeats.length) {
+                sound.playError();
+                showToast(`生徒数(${current.students.length}名)が利用可能な座席数(${availableSeats.length}席)を超えています`, "error");
+                return;
+            }
+
+            const btn = document.getElementById('btn-shuffle');
+            const status = document.getElementById('status-bar');
+            btn.disabled = true;
+
+            status.innerHTML = `<span class="animate-spin inline-block">🎲</span> ランダム配置計算中...`;
+
+            // Helper shuffle
+            function shuffle(array) {
+                const arr = [...array];
+                for (let i = arr.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [arr[i], arr[j]] = [arr[j], arr[i]];
+                }
+                return arr;
+            }
+
+            // Monte-Carlo Constraint Solver
+            const MAX_ATTEMPTS = 6000;
+            let foundSolution = false;
+            let bestSeatsAssignment = null;
+
+            for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+                const shuffledStudents = shuffle(current.students);
+                const shuffledSeatIndices = shuffle(availableSeats.map(s => s.index));
+
+                const trialSeats = current.seats.map(s => ({ ...s, studentId: null }));
+                
+                shuffledStudents.forEach((student, i) => {
+                    const seatIndex = shuffledSeatIndices[i];
+                    trialSeats[seatIndex].studentId = student.id;
+                });
+
+                let isViolated = false;
+                for (let i = 0; i < trialSeats.length; i++) {
+                    const seat = trialSeats[i];
+                    if (!seat.studentId || seat.type === 'disabled') continue;
+
+                    const neighbors = getNeighbors(i, current.gridConfig, current.ngScope || 'horizontal');
+                    for (const nIdx of neighbors) {
+                        const neighborSeat = trialSeats[nIdx];
+                        if (!neighborSeat || !neighborSeat.studentId || neighborSeat.type === 'disabled') continue;
+
+                        const isNg = current.ngPairs.some(p => 
+                            (p.student1Id === seat.studentId && p.student2Id === neighborSeat.studentId) ||
+                            (p.student1Id === neighborSeat.studentId && p.student2Id === seat.studentId)
+                        );
+
+                        if (isNg) {
+                            isViolated = true;
+                            break;
+                        }
+                    }
+                    if (isViolated) break;
+                }
+
+                if (!isViolated) {
+                    foundSolution = true;
+                    bestSeatsAssignment = trialSeats;
+                    break;
+                }
+            }
+
+            if (!foundSolution) {
+                sound.playError();
+                btn.disabled = false;
+                status.textContent = "⚠️ NG指定条件を満たす配置が見つかりませんでした。条件を緩和してください。";
+                showToast("配置不可: NGペアを減らすか、座席数を増やしてください。", "error");
+                return;
+            }
+
+            // Perform Roulette Sound & Animation
+            const gridCards = document.querySelectorAll('.seat-card');
+            const totalSteps = 12;
+            
+            for (let step = 0; step < totalSteps; step++) {
+                sound.playTick();
+                
+                // Temporary random preview on screen
+                const tempShuffled = shuffle(current.students);
+                gridCards.forEach((card, idx) => {
+                    if (current.seats[idx].type === 'seat') {
+                        card.classList.add('roulette-blur');
+                        const randomStudent = tempShuffled[idx % tempShuffled.length];
+                        const nameSpan = card.querySelector('span.font-extrabold');
+                        if (nameSpan && randomStudent) {
+                            nameSpan.textContent = randomStudent.name;
+                        }
+                    }
+                });
+
+                await new Promise(r => setTimeout(r, 60 + step * 18));
+            }
+
+            // Apply final solution
+            current.seats = bestSeatsAssignment;
+            saveToLocalStorage();
+            renderClassroomGrid();
+
+            // Play Bright Fanfare Sound
+            sound.playFanfare();
+
+            btn.disabled = false;
+            status.textContent = "✨ NGペア回避ルールを満たす席替えが完了しました！";
+            showToast("🎉 席替え完了！（NG条件回避成功）", "success");
+        }
+
+        function generateSeatingLayout() {
+            runSeatingShuffle();
+        }
+
+        // --- JSON Data Export / Import Utilities ---
+        function exportClassData() {
+            sound.playClick();
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appData, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `席替えアプリデータ_${new Date().toISOString().slice(0,10)}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+            showToast("設定データを書き出しました", "success");
+        }
+
+        function importClassData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const parsed = JSON.parse(e.target.result);
+                    if (parsed && parsed.classes && Array.isArray(parsed.classes)) {
+                        appData = parsed;
+                        ensureActiveClassValid();
+                        saveToLocalStorage();
+                        syncUIFromCurrentClass();
+                        sound.playFanfare();
+                        showToast("データを取り込みました！", "success");
+                    } else {
+                        throw new Error("無効なフォーマットです");
+                    }
+                } catch (err) {
+                    sound.playError();
+                    showToast("JSONファイルの読み込みに失敗しました", "error");
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        // --- UI Navigation Tabs ---
+        function switchTab(tabName) {
+            sound.playClick();
+            const tabs = ['students', 'rules', 'grid'];
+            tabs.forEach(t => {
+                const btn = document.getElementById(`tab-btn-${t}`);
+                const content = document.getElementById(`tab-content-${t}`);
+                if (t === tabName) {
+                    btn.className = "flex-1 py-2 text-center rounded-lg bg-indigo-600 text-white shadow-sm transition font-bold";
+                    content.classList.remove('hidden');
+                } else {
+                    btn.className = "flex-1 py-2 text-center rounded-lg text-slate-600 hover:text-slate-900 transition font-semibold";
+                    content.classList.add('hidden');
+                }
+            });
+        }
+
+        // Toast Helpers
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            
+            const bgClass = type === 'error' ? 'bg-red-600' : (type === 'success' ? 'bg-emerald-600' : 'bg-slate-900');
+            toast.className = `${bgClass} text-white px-4 py-3 rounded-xl shadow-xl text-xs sm:text-sm font-semibold flex items-center gap-2 transform transition-all duration-300 translate-y-2 opacity-0 pointer-events-auto border border-white/10`;
+            toast.innerHTML = `<span>${escapeHtml(message)}</span>`;
+            
+            container.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.classList.remove('translate-y-2', 'opacity-0');
+            }, 10);
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-2');
+                setTimeout(() => toast.remove(), 300);
+            }, 3200);
+        }
+
+        function escapeHtml(str) {
+            return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+    </script>
+</body>
+</html>
