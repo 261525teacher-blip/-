@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>スマート席替えメーカー - 教員用 (多機能・サウンド付)</title>
+    <title>スマート席替えメーカー - 教員用</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
     <style>
         body {
             font-family: 'Noto Sans JP', 'Inter', sans-serif;
@@ -15,28 +15,32 @@
         }
         .seat-card:hover {
             transform: translateY(-3px);
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 10px 20px -3px rgba(0, 0, 0, 0.12);
         }
         .dragging {
-            opacity: 0.4;
-            transform: scale(0.95);
+            opacity: 0.3;
+            transform: scale(0.92);
         }
         .drag-over {
             border-color: #4f46e5 !important;
             background-color: #e0e7ff !important;
         }
+        .roulette-active {
+            animation: pulseGlow 0.15s infinite alternate;
+        }
+        @keyframes pulseGlow {
+            0% { transform: scale(0.98); filter: brightness(0.95); }
+            100% { transform: scale(1.02); filter: brightness(1.1); }
+        }
         .animate-pop {
-            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            animation: popIn 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
         @keyframes popIn {
-            0% { transform: scale(0.8); opacity: 0; }
+            0% { transform: scale(0.7); opacity: 0; }
             100% { transform: scale(1); opacity: 1; }
         }
-        .roulette-blur {
-            filter: blur(1px);
-            transform: scale(0.98);
-        }
 
+        /* 印刷用スタイル */
         @media print {
             .no-print {
                 display: none !important;
@@ -63,41 +67,47 @@
     <header class="bg-indigo-700 text-white shadow-md no-print sticky top-0 z-40">
         <div class="max-w-7xl mx-auto px-4 py-3 sm:px-6 flex justify-between items-center">
             <div class="flex items-center space-x-3">
-                <div class="bg-amber-400 text-indigo-950 p-2 rounded-xl font-extrabold text-xl shadow-inner flex items-center justify-center w-10 h-10">
+                <div class="bg-amber-400 text-indigo-950 p-2 rounded-xl font-black text-xl shadow-inner flex items-center justify-center w-10 h-10">
                     席
                 </div>
                 <div>
-                    <h1 class="text-lg sm:text-xl font-extrabold tracking-tight flex items-center gap-2">
+                    <h1 class="text-lg sm:text-xl font-black tracking-tight flex items-center gap-2">
                         スマート席替えメーカー
-                        <span class="bg-indigo-500 text-indigo-100 text-xs px-2 py-0.5 rounded-full font-normal hidden sm:inline-block">教員専用</span>
+                        <span id="badge-mode" class="bg-indigo-500 text-indigo-100 text-xs px-2.5 py-0.5 rounded-full font-medium">教員モード</span>
                     </h1>
-                    <p class="text-xs text-indigo-200">NGペア自動回避・複数クラス管理・明るいサウンド演出付き</p>
+                    <p class="text-xs text-indigo-200">NGペア自動回避・児童用投影モード・明るい効果音付き</p>
                 </div>
             </div>
 
             <div class="flex items-center space-x-2 sm:space-x-3">
-                <!-- Sound Toggle Button -->
-                <button id="btn-sound-toggle" onclick="toggleSound()" class="bg-indigo-800 hover:bg-indigo-600 text-amber-300 border border-indigo-500/50 text-xs sm:text-sm px-3 py-2 rounded-lg flex items-center gap-1.5 font-medium transition shadow-sm" title="効果音のON/OFF切り替え">
+                <!-- Toggle Student Presentation Mode Button -->
+                <button id="btn-toggle-student-mode" onclick="toggleStudentMode()" class="bg-amber-400 hover:bg-amber-300 text-indigo-950 text-xs sm:text-sm px-3.5 py-2 rounded-xl font-bold transition shadow-md flex items-center gap-1.5 transform active:scale-95">
+                    <span id="mode-icon">🖥️</span>
+                    <span id="mode-label">生徒に見せるモード (設定隠す)</span>
+                </button>
+
+                <!-- Sound Toggle -->
+                <button id="btn-sound-toggle" onclick="toggleSound()" class="bg-indigo-800 hover:bg-indigo-600 text-amber-300 border border-indigo-500/50 text-xs sm:text-sm px-3 py-2 rounded-xl flex items-center gap-1.5 font-semibold transition shadow-sm">
                     <span id="sound-icon">🔊</span>
                     <span id="sound-label" class="hidden sm:inline">サウンド: ON</span>
                 </button>
 
                 <!-- Print Button -->
-                <button onclick="window.print()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs sm:text-sm px-3 py-2 rounded-lg flex items-center gap-1.5 font-medium shadow-sm transition">
+                <button onclick="window.print()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs sm:text-sm px-3 py-2 rounded-xl flex items-center gap-1.5 font-semibold shadow-sm transition">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
-                    <span>印刷 / PDF</span>
+                    <span class="hidden sm:inline">印刷 / PDF</span>
                 </button>
             </div>
         </div>
     </header>
 
-    <!-- Notification Toast Container -->
+    <!-- Toast Notification Container -->
     <div id="toast-container" class="fixed top-4 right-4 z-50 flex flex-col gap-2 pointer-events-none no-print"></div>
 
     <main class="max-w-7xl mx-auto px-4 py-6 sm:px-6 flex-grow w-full grid grid-cols-1 lg:grid-cols-12 gap-6">
 
-        <!-- Top Class Management Bar -->
-        <div class="lg:col-span-12 bg-white rounded-2xl shadow-sm p-4 border border-slate-200/80 flex flex-wrap items-center justify-between gap-4 no-print">
+        <!-- Top Class Management Bar (Teacher Only) -->
+        <div id="class-management-bar" class="lg:col-span-12 bg-white rounded-2xl shadow-sm p-4 border border-slate-200 flex flex-wrap items-center justify-between gap-4 no-print transition-all duration-300">
             <div class="flex items-center gap-3 flex-wrap">
                 <span class="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
                     <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
@@ -106,7 +116,7 @@
                 <select id="select-active-class" onchange="switchClass(this.value)" class="bg-slate-50 border border-slate-300 font-bold text-slate-800 text-sm rounded-xl px-4 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
                     <!-- Dynamic Class Options -->
                 </select>
-                <button onclick="promptCreateClass()" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold text-xs px-3 py-2 rounded-xl transition flex items-center gap-1">
+                <button onclick="promptCreateClass()" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs px-3 py-2 rounded-xl transition flex items-center gap-1">
                     + クラスを追加
                 </button>
                 <button onclick="promptRenameClass()" class="text-xs text-slate-500 hover:text-slate-800 underline">
@@ -116,7 +126,7 @@
 
             <div class="flex items-center gap-2">
                 <button onclick="exportClassData()" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg border transition">
-                    保存データ出力(JSON)
+                    設定データ保存(JSON)
                 </button>
                 <label class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg border transition cursor-pointer">
                     データ復元
@@ -128,62 +138,58 @@
             </div>
         </div>
 
-        <!-- Sidebar / Settings Control (Left Column) -->
-        <section class="lg:col-span-4 flex flex-col gap-6 no-print">
+        <!-- Teacher Settings Control Column (Hidden in Student Presentation Mode) -->
+        <section id="panel-teacher-settings" class="lg:col-span-4 flex flex-col gap-6 no-print transition-all duration-300">
             
             <!-- Tab Controls -->
             <div class="bg-white rounded-xl shadow-sm p-1 border border-slate-200 flex text-xs sm:text-sm font-semibold">
                 <button id="tab-btn-students" onclick="switchTab('students')" class="flex-1 py-2 text-center rounded-lg bg-indigo-600 text-white shadow-sm transition">1. 名簿登録</button>
-                <button id="tab-btn-rules" onclick="switchTab('rules')" class="flex-1 py-2 text-center rounded-lg text-slate-600 hover:text-slate-900 transition">2. NG指定</button>
+                <button id="tab-btn-rules" onclick="switchTab('rules')" class="flex-1 py-2 text-center rounded-lg text-slate-600 hover:text-slate-900 transition">2. NG指定 (秘密)</button>
                 <button id="tab-btn-grid" onclick="switchTab('grid')" class="flex-1 py-2 text-center rounded-lg text-slate-600 hover:text-slate-900 transition">3. 教室配置</button>
             </div>
 
-            <!-- Tab 1: Students Management Panel -->
+            <!-- Tab 1: Student Roster -->
             <div id="tab-content-students" class="bg-white rounded-2xl shadow-sm p-5 border border-slate-200 flex flex-col gap-4">
                 <div class="flex justify-between items-center border-b pb-3">
                     <h2 class="font-bold text-slate-800 flex items-center gap-2 text-sm">
                         <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
                         生徒名簿 (<span id="student-count" class="text-indigo-600 font-bold">0</span>名)
                     </h2>
-                    <button onclick="loadSampleDataForCurrentClass()" class="text-xs text-indigo-600 hover:underline">サンプル生徒読込</button>
+                    <button onclick="loadSampleDataForCurrentClass()" class="text-xs text-indigo-600 hover:underline">サンプル生徒追加</button>
                 </div>
 
-                <!-- Add Student Single -->
                 <div class="flex gap-2">
                     <input type="text" id="input-student-name" placeholder="生徒の氏名（例: 佐藤 太陽）" class="flex-1 text-xs sm:text-sm border border-slate-300 rounded-xl px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
                     <button onclick="addSingleStudent()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition shrink-0">追加</button>
                 </div>
 
-                <!-- Bulk Registration Collapsible -->
                 <details class="text-xs bg-slate-50 p-3 rounded-xl border border-slate-200">
-                    <summary class="font-semibold text-slate-700 cursor-pointer">改行・カンマ区切りで一括入力</summary>
+                    <summary class="font-semibold text-slate-700 cursor-pointer">改行・カンマで一括入力</summary>
                     <div class="mt-2 flex flex-col gap-2">
                         <textarea id="input-bulk-students" rows="4" placeholder="佐藤花子&#10;鈴木一郎&#10;高橋健太" class="w-full border border-slate-300 rounded-lg p-2 text-xs font-mono"></textarea>
                         <button onclick="addBulkStudents()" class="bg-slate-800 hover:bg-slate-900 text-white py-1.5 px-3 rounded-lg text-xs font-semibold self-end">一括追加する</button>
                     </div>
                 </details>
 
-                <!-- Student List Container -->
-                <div id="student-list" class="max-h-72 overflow-y-auto space-y-1 pr-1 border rounded-xl p-2 bg-slate-50/50">
+                <div id="student-list" class="max-h-64 overflow-y-auto space-y-1 pr-1 border rounded-xl p-2 bg-slate-50/50">
                     <!-- Dynamic rendering -->
                 </div>
 
                 <div class="flex justify-between items-center text-xs text-slate-500 pt-2 border-t">
-                    <button onclick="removeAllStudents()" class="text-red-500 hover:underline">このクラスの生徒を全員消去</button>
+                    <button onclick="removeAllStudents()" class="text-red-500 hover:underline">全生徒消去</button>
                 </div>
             </div>
 
-            <!-- Tab 2: NG Pair Rules Panel -->
+            <!-- Tab 2: NG Pair Rules (Confidential) -->
             <div id="tab-content-rules" class="bg-white rounded-2xl shadow-sm p-5 border border-slate-200 flex flex-col gap-4 hidden">
                 <div class="border-b pb-3">
                     <h2 class="font-bold text-slate-800 flex items-center gap-2 text-sm">
                         <svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"></path></svg>
-                        隣同士不可（NGペア）設定
+                        隣同士不可 (NGペア) 設定
                     </h2>
-                    <p class="text-xs text-slate-500 mt-1">選んだ2名の生徒が絶対に隣り合わないようにアルゴリズムで制御します。</p>
+                    <p class="text-xs text-slate-500 mt-1">選んだ2名の生徒が隣り合わないようにアルゴリズムが制御します。</p>
                 </div>
 
-                <!-- Add NG Pair -->
                 <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 flex flex-col gap-3">
                     <div class="grid grid-cols-2 gap-2">
                         <div>
@@ -204,17 +210,15 @@
                     </button>
                 </div>
 
-                <!-- NG Rules List -->
                 <div class="flex-1">
                     <h3 class="text-xs font-bold text-slate-700 mb-2">設定中のNGペア (<span id="ng-count">0</span>件)</h3>
-                    <div id="ng-pair-list" class="max-h-52 overflow-y-auto space-y-2 pr-1">
+                    <div id="ng-pair-list" class="max-h-48 overflow-y-auto space-y-2 pr-1">
                         <!-- Dynamic list -->
                     </div>
                 </div>
 
-                <!-- Proximity Mode Setting -->
                 <div class="bg-indigo-50/70 p-3 rounded-xl border border-indigo-100 text-xs text-indigo-950 space-y-2">
-                    <span class="font-bold block text-indigo-900">NG判定の対象範囲:</span>
+                    <span class="font-bold block text-indigo-900">NG回避の対象範囲:</span>
                     <label class="flex items-center gap-2 cursor-pointer">
                         <input type="radio" name="ng-scope" value="horizontal" checked onchange="updateNgScope(this.value)" class="text-indigo-600 focus:ring-indigo-500">
                         <span>左右のとなり同士のみ回避</span>
@@ -226,12 +230,12 @@
                 </div>
             </div>
 
-            <!-- Tab 3: Grid Configuration Panel -->
+            <!-- Tab 3: Grid Configuration -->
             <div id="tab-content-grid" class="bg-white rounded-2xl shadow-sm p-5 border border-slate-200 flex flex-col gap-4 hidden">
                 <div class="border-b pb-3">
                     <h2 class="font-bold text-slate-800 flex items-center gap-2 text-sm">
                         <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
-                        座席配置（列数・行数）
+                        座席レイアウト設定
                     </h2>
                 </div>
 
@@ -248,72 +252,63 @@
 
                 <div class="text-xs text-slate-600 bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-1">
                     <p>総マス数: <span id="total-seats-display" class="font-bold text-indigo-600">30</span> 席</p>
-                    <p class="text-slate-500">※ 右側の教室画面で個別のマスをクリックすると「通路・使わない席」に変更できます。</p>
+                    <p class="text-slate-500">※ 右側の席レイアウト上でマスをクリックすると「通路・不使用席」に変更できます。</p>
                 </div>
             </div>
 
-            <!-- Main Shuffle Action Button -->
-            <div class="bg-gradient-to-br from-indigo-900 to-slate-900 p-5 rounded-2xl text-white shadow-lg flex flex-col gap-3 relative overflow-hidden">
-                <div class="absolute -right-6 -bottom-6 w-24 h-24 bg-indigo-500/10 rounded-full blur-xl pointer-events-none"></div>
-
-                <button id="btn-shuffle" onclick="runSeatingShuffle()" class="w-full bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-indigo-950 py-3.5 px-4 rounded-xl font-black text-base shadow-lg hover:shadow-xl hover:scale-[1.01] active:scale-[0.99] transition transform flex items-center justify-center gap-2 group">
-                    <span class="text-xl group-hover:rotate-180 transition transform duration-500">🎲</span>
-                    <span>席替えを実行する (効果音付き)</span>
+            <!-- Main Shuffle Action Box in Sidebar -->
+            <div class="bg-gradient-to-br from-indigo-900 to-slate-900 p-5 rounded-2xl text-white shadow-lg flex flex-col gap-3">
+                <button id="btn-shuffle-sidebar" onclick="runSeatingShuffle()" class="w-full bg-gradient-to-r from-emerald-400 to-teal-400 hover:from-emerald-300 hover:to-teal-300 text-indigo-950 py-3.5 px-4 rounded-xl font-black text-base shadow-lg hover:shadow-xl hover:scale-[1.01] active:scale-[0.99] transition transform flex items-center justify-center gap-2">
+                    <span class="text-xl">🎲</span>
+                    <span>席替えを実行する</span>
                 </button>
-
-                <div id="status-bar" class="text-xs text-center font-medium text-indigo-200 min-h-[20px] flex items-center justify-center gap-1">
-                    ✨ シャッフルボタンを押すとルーレットがスタートします
-                </div>
             </div>
 
         </section>
 
-        <!-- Classroom Visualizer (Right Column) -->
-        <section class="lg:col-span-8 flex flex-col gap-4">
+        <!-- Classroom Visualizer & Presentation Area -->
+        <section id="panel-classroom-visualizer" class="lg:col-span-8 flex flex-col gap-4 transition-all duration-300">
             
             <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex flex-col min-h-[620px] print-container relative">
                 
-                <!-- Classroom Title for Print -->
+                <!-- Print Title -->
                 <div class="hidden print-only mb-4 text-center border-b pb-2">
                     <h1 class="text-2xl font-bold" id="print-class-title">座席配置図</h1>
                     <p class="text-sm text-gray-500" id="print-date"></p>
                 </div>
 
-                <!-- Classroom Front Indicator -->
+                <!-- Classroom Front Blackboard -->
                 <div class="mb-6 flex flex-col items-center">
-                    <div class="w-2/3 max-w-sm bg-slate-800 text-amber-300 text-center py-2 rounded-xl font-black text-sm tracking-widest shadow-md border-b-4 border-slate-950 flex items-center justify-center gap-2">
+                    <div class="w-full max-w-md bg-emerald-800 text-amber-200 text-center py-3 rounded-xl font-black text-base tracking-widest shadow-md border-b-4 border-emerald-950 flex items-center justify-center gap-3">
                         <span>📺</span> 【 黒 板 ・ 教 卓 】 <span>📺</span>
                     </div>
-                    <div class="text-[11px] text-slate-400 mt-1 font-medium">※ こちら側が教室の前面（黒板側）です</div>
                 </div>
 
-                <!-- Alert Warning Banner (if conflicts exist) -->
+                <!-- Alert Warning Banner (Only visible in Teacher mode if conflicts exist) -->
                 <div id="conflict-alert" class="hidden mb-4 bg-red-50 border-2 border-red-200 text-red-700 p-3 rounded-xl text-xs flex items-center gap-2 animate-bounce">
                     <svg class="w-5 h-5 text-red-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
                     <div>
                         <span class="font-bold">NGペア警告:</span>
-                        <span id="conflict-message">手動操作または条件過多のため、隣同士不可に指定された生徒が隣接しています。</span>
+                        <span>手動操作または条件超過のため、NG指定された生徒が隣接しています。</span>
                     </div>
                 </div>
 
                 <!-- Seating Grid Canvas -->
                 <div class="flex-1 flex justify-center items-center overflow-x-auto py-2">
                     <div id="classroom-grid" class="grid gap-3 transition-all duration-300 w-full">
-                        <!-- Seats will be rendered dynamically -->
+                        <!-- Dynamic Seats Rendering -->
                     </div>
                 </div>
 
-                <!-- Instructions Footer -->
-                <div class="mt-6 pt-4 border-t border-slate-100 flex flex-wrap justify-between items-center text-xs text-slate-500 no-print gap-2">
-                    <div class="flex flex-wrap items-center gap-3">
-                        <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-md bg-indigo-50 border border-indigo-200 inline-block"></span> 着席中</span>
-                        <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-md bg-slate-100 border border-slate-300 inline-block"></span> 空席</span>
-                        <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-md bg-slate-200 border border-dashed border-slate-400 inline-block"></span> 通路・不使用</span>
-                        <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-md bg-red-100 border border-red-400 inline-block"></span> NG警告</span>
-                    </div>
-                    <div class="text-right text-slate-400 font-medium">
-                        💡 生徒カード同士をドラッグ＆ドロップで自由に入れ替え可能
-                    </div>
+                <!-- Large Presentation Action Bar (Big Shuffle Button visible in Student presentation mode) -->
+                <div id="student-presentation-bar" class="mt-6 pt-4 border-t border-slate-100 flex flex-col items-center gap-3">
+                    <button id="btn-shuffle-main" onclick="runSeatingShuffle()" class="w-full max-w-lg bg-gradient-to-r from-emerald-500 via-teal-500 to-indigo-600 hover:from-emerald-400 hover:to-indigo-500 text-white font-black text-lg py-4 px-6 rounded-2xl shadow-xl hover:shadow-2xl hover:scale-105 active:scale-95 transition transform flex items-center justify-center gap-3 border-2 border-white/20">
+                        <span class="text-2xl animate-bounce">🎲</span>
+                        <span class="tracking-wide">スタート！ (ルーレット実行)</span>
+                    </button>
+                    <p id="status-bar" class="text-xs text-slate-500 font-semibold text-center">
+                        ✨ スタートボタンを押すと、ドラムロール演出と共に席替えが始まります
+                    </p>
                 </div>
 
             </div>
@@ -323,7 +318,7 @@
     </main>
 
     <script>
-        // --- Web Audio API Bright Sound Effects Engine ---
+        // --- Web Audio API Bright Sound Engine ---
         class SoundEngine {
             constructor() {
                 this.ctx = null;
@@ -349,40 +344,36 @@
 
                 const osc = this.ctx.createOscillator();
                 const gain = this.ctx.createGain();
-                
                 osc.type = 'sine';
-                osc.frequency.setValueAtTime(600, this.ctx.currentTime);
-                osc.frequency.exponentialRampToValueAtTime(800, this.ctx.currentTime + 0.05);
+                osc.frequency.setValueAtTime(523.25, this.ctx.currentTime); // C5
+                osc.frequency.exponentialRampToValueAtTime(783.99, this.ctx.currentTime + 0.06);
 
-                gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.05);
+                gain.gain.setValueAtTime(0.12, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.06);
 
                 osc.connect(gain);
                 gain.connect(this.ctx.destination);
-
                 osc.start();
-                osc.stop(this.ctx.currentTime + 0.05);
+                osc.stop(this.ctx.currentTime + 0.06);
             }
 
-            playTick() {
+            playDrumrollTick() {
                 if (!this.enabled) return;
                 this.init();
                 if (!this.ctx) return;
 
                 const osc = this.ctx.createOscillator();
                 const gain = this.ctx.createGain();
-
                 osc.type = 'triangle';
-                osc.frequency.setValueAtTime(300 + Math.random() * 200, this.ctx.currentTime);
+                osc.frequency.setValueAtTime(200 + Math.random() * 300, this.ctx.currentTime);
 
-                gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.04);
+                gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.05);
 
                 osc.connect(gain);
                 gain.connect(this.ctx.destination);
-
                 osc.start();
-                osc.stop(this.ctx.currentTime + 0.04);
+                osc.stop(this.ctx.currentTime + 0.05);
             }
 
             playFanfare() {
@@ -390,12 +381,12 @@
                 this.init();
                 if (!this.ctx) return;
 
-                // Bright cheerful fanfare chords (C Major -> F -> G -> C)
+                // Bright, cheerful fanfare sequence: C5 -> E5 -> G5 -> C6
                 const notes = [
                     { f: 523.25, t: 0, d: 0.12 },     // C5
                     { f: 659.25, t: 0.12, d: 0.12 },  // E5
                     { f: 783.99, t: 0.24, d: 0.12 },  // G5
-                    { f: 1046.50, t: 0.36, d: 0.45 }  // C6
+                    { f: 1046.50, t: 0.36, d: 0.55 }  // C6
                 ];
 
                 notes.forEach(n => {
@@ -405,7 +396,7 @@
                     osc.type = 'triangle';
                     osc.frequency.setValueAtTime(n.f, this.ctx.currentTime + n.t);
 
-                    gain.gain.setValueAtTime(0.2, this.ctx.currentTime + n.t);
+                    gain.gain.setValueAtTime(0.25, this.ctx.currentTime + n.t);
                     gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + n.t + n.d);
 
                     osc.connect(gain);
@@ -426,16 +417,16 @@
 
                 osc.type = 'sawtooth';
                 osc.frequency.setValueAtTime(220, this.ctx.currentTime);
-                osc.frequency.setValueAtTime(180, this.ctx.currentTime + 0.1);
+                osc.frequency.setValueAtTime(170, this.ctx.currentTime + 0.1);
 
                 gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.3);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.25);
 
                 osc.connect(gain);
                 gain.connect(this.ctx.destination);
 
                 osc.start();
-                osc.stop(this.ctx.currentTime + 0.3);
+                osc.stop(this.ctx.currentTime + 0.25);
             }
 
             playDropSound() {
@@ -447,8 +438,8 @@
                 const gain = this.ctx.createGain();
 
                 osc.type = 'sine';
-                osc.frequency.setValueAtTime(400, this.ctx.currentTime);
-                osc.frequency.exponentialRampToValueAtTime(700, this.ctx.currentTime + 0.08);
+                osc.frequency.setValueAtTime(350, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(650, this.ctx.currentTime + 0.08);
 
                 gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
                 gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.08);
@@ -478,8 +469,9 @@
             }
         }
 
-        // --- Application State Store ---
-        const LOCAL_STORAGE_KEY = 'smart_seating_app_data_v2';
+        const LOCAL_STORAGE_KEY = 'smart_seating_app_v3';
+
+        let isStudentPresentationMode = false;
 
         let appData = {
             activeClassId: 'class_1',
@@ -546,7 +538,46 @@
             }
         }
 
-        // --- Class Switcher & Management ---
+        function toggleStudentMode() {
+            sound.playClick();
+            isStudentPresentationMode = !isStudentPresentationMode;
+
+            const teacherPanel = document.getElementById('panel-teacher-settings');
+            const classBar = document.getElementById('class-management-bar');
+            const visualizerPanel = document.getElementById('panel-classroom-visualizer');
+            const badgeMode = document.getElementById('badge-mode');
+            const modeIcon = document.getElementById('mode-icon');
+            const modeLabel = document.getElementById('mode-label');
+
+            if (isStudentPresentationMode) {
+                // Hide Teacher Settings & Class Mgmt completely
+                teacherPanel.classList.add('hidden');
+                classBar.classList.add('hidden');
+                visualizerPanel.classList.remove('lg:col-span-8');
+                visualizerPanel.classList.add('lg:col-span-12');
+
+                badgeMode.textContent = "生徒提示モード (設定非表示中)";
+                badgeMode.className = "bg-amber-400 text-indigo-950 text-xs px-2.5 py-0.5 rounded-full font-bold";
+                modeIcon.textContent = "⚙️";
+                modeLabel.textContent = "教員設定を表示する";
+
+                showToast("生徒向け表示モードに変更しました (NG設定や名簿は隠されています)", "info");
+            } else {
+                // Restore Teacher View
+                teacherPanel.classList.remove('hidden');
+                classBar.classList.remove('hidden');
+                visualizerPanel.classList.remove('lg:col-span-12');
+                visualizerPanel.classList.add('lg:col-span-8');
+
+                badgeMode.textContent = "教員モード";
+                badgeMode.className = "bg-indigo-500 text-indigo-100 text-xs px-2.5 py-0.5 rounded-full font-medium";
+                modeIcon.textContent = "🖥️";
+                modeLabel.textContent = "生徒に見せるモード (設定隠す)";
+            }
+
+            renderClassroomGrid();
+        }
+
         function renderClassSelectOptions() {
             const selectEl = document.getElementById('select-active-class');
             selectEl.innerHTML = appData.classes.map(c => 
@@ -573,15 +604,13 @@
             };
             appData.classes.push(newClass);
             appData.activeClassId = newClass.id;
-            
-            // Populate sample data for default class
             loadSampleStudentsForClass(newClass);
             saveToLocalStorage();
         }
 
         function promptCreateClass() {
             sound.playClick();
-            const name = prompt("新しいクラス名を入力してください（例: 2年B組, 英語アディショナルクラス）:");
+            const name = prompt("新しいクラス名を入力してください（例: 2年B組）:");
             if (name && name.trim()) {
                 const newClass = {
                     id: 'class_' + Date.now(),
@@ -617,11 +646,11 @@
         function promptDeleteClass() {
             sound.playClick();
             if (appData.classes.length <= 1) {
-                showToast("最低1つのクラスが必要です（削除できません）", "error");
+                showToast("最低1つのクラスが必要です", "error");
                 return;
             }
             const current = getCurrentClass();
-            if (confirm(`本当にクラス「${current.name}」を削除しますか？`)) {
+            if (confirm(`クラス「${current.name}」を削除しますか？`)) {
                 appData.classes = appData.classes.filter(c => c.id !== current.id);
                 appData.activeClassId = appData.classes[0].id;
                 saveToLocalStorage();
@@ -634,18 +663,14 @@
         function syncUIFromCurrentClass() {
             const current = getCurrentClass();
 
-            // Set inputs
             document.getElementById('input-rows').value = current.gridConfig.rows;
             document.getElementById('input-cols').value = current.gridConfig.cols;
             
-            // Set scope radio
             const radios = document.getElementsByName('ng-scope');
             radios.forEach(r => r.checked = (r.value === (current.ngScope || 'horizontal')));
 
-            // Print header update
             document.getElementById('print-class-title').textContent = `${current.name} 座席配置図`;
 
-            // Make sure seats grid aligns with config
             ensureGridSeatsAllocated(current);
 
             renderStudentsList();
@@ -671,8 +696,7 @@
             }));
 
             classObj.ngPairs = [
-                { id: 'ng_1', student1Id: classObj.students[0].id, student2Id: classObj.students[1].id },
-                { id: 'ng_2', student1Id: classObj.students[2].id, student2Id: classObj.students[3].id }
+                { id: 'ng_1', student1Id: classObj.students[0].id, student2Id: classObj.students[1].id }
             ];
 
             ensureGridSeatsAllocated(classObj);
@@ -684,7 +708,6 @@
             loadSampleStudentsForClass(current);
             saveToLocalStorage();
             syncUIFromCurrentClass();
-            generateSeatingLayout(false); // fast layout
             showToast("サンプル生徒名簿を読み込みました", "success");
         }
 
@@ -812,7 +835,6 @@
             }
         }
 
-        // --- NG Pair Rules Logic ---
         function updateNgSelectDropdowns() {
             const current = getCurrentClass();
             const sel1 = document.getElementById('select-ng-1');
@@ -863,7 +885,7 @@
             saveToLocalStorage();
             renderNgPairsList();
             checkAndHighlightConflicts();
-            showToast("NG指定ルールを追加しました", "success");
+            showToast("NG回避ルールを追加しました", "success");
         }
 
         function removeNgPair(pairId) {
@@ -915,7 +937,6 @@
             checkAndHighlightConflicts();
         }
 
-        // --- Seat Grid Management ---
         function updateGridDimensions() {
             sound.playClick();
             const rows = parseInt(document.getElementById('input-rows').value, 10) || 5;
@@ -953,6 +974,7 @@
         }
 
         function toggleSeatType(cellIndex) {
+            if (isStudentPresentationMode) return; // Prevent edits in student mode
             sound.playClick();
             const current = getCurrentClass();
             if (current.seats[cellIndex].type === 'seat') {
@@ -966,7 +988,6 @@
             checkAndHighlightConflicts();
         }
 
-        // --- Classroom Visual Grid Rendering ---
         function renderClassroomGrid() {
             const current = getCurrentClass();
             const gridEl = document.getElementById('classroom-grid');
@@ -980,18 +1001,18 @@
                 const row = Math.floor(index / cols);
                 const col = index % cols;
                 const student = seat.studentId ? current.students.find(s => s.id === seat.studentId) : null;
-                const isConflicted = conflicts.has(index);
+                const isConflicted = !isStudentPresentationMode && conflicts.has(index); // Hide conflict badge in student mode
 
                 if (seat.type === 'disabled') {
                     return `
-                        <div onclick="toggleSeatType(${index})" title="クリックで通常の席に変更" class="h-20 sm:h-24 rounded-xl bg-slate-100/80 border-2 border-dashed border-slate-300 flex flex-col justify-center items-center text-slate-400 cursor-pointer hover:bg-slate-200 transition text-xs select-none">
+                        <div ${!isStudentPresentationMode ? `onclick="toggleSeatType(${index})"` : ''} class="h-20 sm:h-24 rounded-2xl bg-slate-100/70 border-2 border-dashed border-slate-300 flex flex-col justify-center items-center text-slate-400 text-xs select-none">
                             <span class="font-mono text-[10px] text-slate-400 mb-1">${row + 1}-${col + 1}</span>
                             <span class="font-bold">通路 / 空席</span>
                         </div>
                     `;
                 }
 
-                let borderBgClass = "bg-white border-slate-200 hover:border-indigo-400";
+                let borderBgClass = "bg-white border-slate-200";
                 if (isConflicted) {
                     borderBgClass = "bg-red-50 border-red-500 shadow-md ring-2 ring-red-400/50";
                 } else if (student) {
@@ -1000,13 +1021,12 @@
 
                 return `
                     <div data-index="${index}" 
-                         draggable="${student ? 'true' : 'false'}"
+                         draggable="${student && !isStudentPresentationMode ? 'true' : 'false'}"
                          ondragstart="handleDragStart(event, ${index})"
                          ondragover="handleDragOver(event)"
                          ondragleave="handleDragLeave(event)"
                          ondrop="handleDrop(event, ${index})"
-                         onclick="handleSeatClick(event, ${index})"
-                         class="seat-card h-20 sm:h-24 rounded-2xl border-2 p-2 flex flex-col justify-between cursor-pointer select-none relative ${borderBgClass}">
+                         class="seat-card h-20 sm:h-24 rounded-2xl border-2 p-2 flex flex-col justify-between select-none relative ${borderBgClass}">
                         
                         <div class="flex justify-between items-start text-[10px] text-slate-400 no-print">
                             <span class="font-mono font-semibold">${row + 1}-${col + 1}</span>
@@ -1015,41 +1035,38 @@
 
                         <div class="flex-1 flex items-center justify-center text-center px-1">
                             ${student ? `
-                                <span class="font-extrabold text-slate-800 text-xs sm:text-sm tracking-tight leading-snug">${escapeHtml(student.name)}</span>
+                                <span class="font-extrabold text-slate-800 text-sm sm:text-base tracking-tight leading-snug">${escapeHtml(student.name)}</span>
                             ` : `
                                 <span class="text-xs text-slate-300 font-medium">空席</span>
                             `}
                         </div>
 
                         <div class="text-[9px] text-slate-400 text-center no-print">
-                            ${student ? '⋮⋮ ドラッグ可' : ''}
+                            ${student && !isStudentPresentationMode ? '⋮⋮ ドラッグ可' : ''}
                         </div>
                     </div>
                 `;
             }).join('');
 
             const conflictBanner = document.getElementById('conflict-alert');
-            if (conflicts.size > 0) {
+            if (conflicts.size > 0 && !isStudentPresentationMode) {
                 conflictBanner.classList.remove('hidden');
             } else {
                 conflictBanner.classList.add('hidden');
             }
         }
 
-        function handleSeatClick(e, index) {
-            // Optional click handler
-        }
-
-        // --- Drag and Drop Logic for Manual Seat Swapping ---
         let draggedSeatIndex = null;
 
         function handleDragStart(e, index) {
+            if (isStudentPresentationMode) return;
             draggedSeatIndex = index;
             e.dataTransfer.effectAllowed = 'move';
             e.currentTarget.classList.add('dragging');
         }
 
         function handleDragOver(e) {
+            if (isStudentPresentationMode) return;
             e.preventDefault();
             e.dataTransfer.dropEffect = 'move';
             e.currentTarget.classList.add('drag-over');
@@ -1060,6 +1077,7 @@
         }
 
         function handleDrop(e, targetIndex) {
+            if (isStudentPresentationMode) return;
             e.preventDefault();
             e.currentTarget.classList.remove('drag-over');
 
@@ -1068,7 +1086,6 @@
             const current = getCurrentClass();
             sound.playDropSound();
 
-            // Swap students
             const temp = current.seats[draggedSeatIndex].studentId;
             current.seats[draggedSeatIndex].studentId = current.seats[targetIndex].studentId;
             current.seats[targetIndex].studentId = temp;
@@ -1076,25 +1093,21 @@
             saveToLocalStorage();
             renderClassroomGrid();
             checkAndHighlightConflicts();
-            showToast("座席を手動で入れ替えました");
+            showToast("座席を入れ替えました");
         }
 
-        // --- Conflict Detection Algorithm ---
         function getNeighbors(index, gridConfig, scope) {
             const { rows, cols } = gridConfig;
             const r = Math.floor(index / cols);
             const c = index % cols;
             const neighbors = [];
 
-            // Horizontal neighbors
             if (c > 0) neighbors.push(index - 1);
             if (c < cols - 1) neighbors.push(index + 1);
 
             if (scope === 'all') {
-                // Vertical
                 if (r > 0) neighbors.push(index - cols);
                 if (r < rows - 1) neighbors.push(index + cols);
-                // Diagonal
                 if (r > 0 && c > 0) neighbors.push(index - cols - 1);
                 if (r > 0 && c < cols - 1) neighbors.push(index - cols + 1);
                 if (r < rows - 1 && c > 0) neighbors.push(index + cols - 1);
@@ -1141,7 +1154,6 @@
             renderClassroomGrid();
         }
 
-        // --- Seating Generation with Animated Roulette and Fanfare ---
         async function runSeatingShuffle() {
             sound.playClick();
             const current = getCurrentClass();
@@ -1152,17 +1164,19 @@
 
             if (current.students.length > availableSeats.length) {
                 sound.playError();
-                showToast(`生徒数(${current.students.length}名)が利用可能な座席数(${availableSeats.length}席)を超えています`, "error");
+                showToast(`生徒数(${current.students.length}名)が配置可能数(${availableSeats.length}席)を超えています`, "error");
                 return;
             }
 
-            const btn = document.getElementById('btn-shuffle');
+            const btnMain = document.getElementById('btn-shuffle-main');
+            const btnSide = document.getElementById('btn-shuffle-sidebar');
             const status = document.getElementById('status-bar');
-            btn.disabled = true;
 
-            status.innerHTML = `<span class="animate-spin inline-block">🎲</span> ランダム配置計算中...`;
+            if (btnMain) btnMain.disabled = true;
+            if (btnSide) btnSide.disabled = true;
 
-            // Helper shuffle
+            status.innerHTML = `<span class="animate-spin inline-block">🎲</span> ドラムロール中... 最適な席配置を試算中！`;
+
             function shuffle(array) {
                 const arr = [...array];
                 for (let i = arr.length - 1; i > 0; i--) {
@@ -1172,8 +1186,8 @@
                 return arr;
             }
 
-            // Monte-Carlo Constraint Solver
-            const MAX_ATTEMPTS = 6000;
+            // Algorithm Solver (Monte-Carlo Constraint Satisfaction)
+            const MAX_ATTEMPTS = 7000;
             let foundSolution = false;
             let bestSeatsAssignment = null;
 
@@ -1220,24 +1234,24 @@
 
             if (!foundSolution) {
                 sound.playError();
-                btn.disabled = false;
-                status.textContent = "⚠️ NG指定条件を満たす配置が見つかりませんでした。条件を緩和してください。";
-                showToast("配置不可: NGペアを減らすか、座席数を増やしてください。", "error");
+                if (btnMain) btnMain.disabled = false;
+                if (btnSide) btnSide.disabled = false;
+                status.textContent = "⚠️ 条件を満たす席替えが見つかりませんでした。NG指定を少し緩めてください。";
+                showToast("配置不可: NGペアを削除するか、席数を増やしてください", "error");
                 return;
             }
 
-            // Perform Roulette Sound & Animation
+            // Visual Roulette Animation
             const gridCards = document.querySelectorAll('.seat-card');
-            const totalSteps = 12;
+            const totalSteps = 16;
             
             for (let step = 0; step < totalSteps; step++) {
-                sound.playTick();
+                sound.playDrumrollTick();
                 
-                // Temporary random preview on screen
                 const tempShuffled = shuffle(current.students);
                 gridCards.forEach((card, idx) => {
                     if (current.seats[idx].type === 'seat') {
-                        card.classList.add('roulette-blur');
+                        card.classList.add('roulette-active');
                         const randomStudent = tempShuffled[idx % tempShuffled.length];
                         const nameSpan = card.querySelector('span.font-extrabold');
                         if (nameSpan && randomStudent) {
@@ -1246,37 +1260,36 @@
                     }
                 });
 
-                await new Promise(r => setTimeout(r, 60 + step * 18));
+                await new Promise(r => setTimeout(r, 50 + step * 18));
             }
 
-            // Apply final solution
+            // Clear roulette visual classes
+            gridCards.forEach(card => card.classList.remove('roulette-active'));
+
+            // Final Assignment
             current.seats = bestSeatsAssignment;
             saveToLocalStorage();
             renderClassroomGrid();
 
-            // Play Bright Fanfare Sound
+            // Play Bright Fanfare
             sound.playFanfare();
 
-            btn.disabled = false;
-            status.textContent = "✨ NGペア回避ルールを満たす席替えが完了しました！";
-            showToast("🎉 席替え完了！（NG条件回避成功）", "success");
+            if (btnMain) btnMain.disabled = false;
+            if (btnSide) btnSide.disabled = false;
+            status.textContent = "🎉 席替えが完了しました！新しい席に移動してください。";
+            showToast("🎉 席替え成功！(NG回避条件クリア)", "success");
         }
 
-        function generateSeatingLayout() {
-            runSeatingShuffle();
-        }
-
-        // --- JSON Data Export / Import Utilities ---
         function exportClassData() {
             sound.playClick();
             const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appData, null, 2));
             const downloadAnchor = document.createElement('a');
             downloadAnchor.setAttribute("href", dataStr);
-            downloadAnchor.setAttribute("download", `席替えアプリデータ_${new Date().toISOString().slice(0,10)}.json`);
+            downloadAnchor.setAttribute("download", `席替えデータ_${new Date().toISOString().slice(0,10)}.json`);
             document.body.appendChild(downloadAnchor);
             downloadAnchor.click();
             downloadAnchor.remove();
-            showToast("設定データを書き出しました", "success");
+            showToast("設定データをダウンロードしました", "success");
         }
 
         function importClassData(event) {
@@ -1293,9 +1306,9 @@
                         saveToLocalStorage();
                         syncUIFromCurrentClass();
                         sound.playFanfare();
-                        showToast("データを取り込みました！", "success");
+                        showToast("設定データを取り込みました！", "success");
                     } else {
-                        throw new Error("無効なフォーマットです");
+                        throw new Error("無効なフォーマット");
                     }
                 } catch (err) {
                     sound.playError();
@@ -1305,7 +1318,6 @@
             reader.readAsText(file);
         }
 
-        // --- UI Navigation Tabs ---
         function switchTab(tabName) {
             sound.playClick();
             const tabs = ['students', 'rules', 'grid'];
@@ -1322,7 +1334,7 @@
             });
         }
 
-        // Toast Helpers
+        // Toast Helper
         function showToast(message, type = 'info') {
             const container = document.getElementById('toast-container');
             const toast = document.createElement('div');
